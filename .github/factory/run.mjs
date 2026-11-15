@@ -15,7 +15,7 @@ import { makeInvocation } from './providers/contract.mjs';
 import { createProviderRegistry } from './providers/index.mjs';
 import { approveExactCommit, reconcileAgentExecution, reconcileAttempt, reconcileMerge, reconcileTaskCreation } from './recovery.mjs';
 import { renderProjectReport } from './report.mjs';
-import { hitFailpoint } from './failpoints.mjs';
+import { activeFailpoint, hitFailpoint } from './failpoints.mjs';
 import { outputSchemaForRole, parseAgentResultReceipts } from './execution.mjs';
 
 const { GITHUB_TOKEN, GITHUB_REPOSITORY: REPO } = process.env;
@@ -853,6 +853,10 @@ async function writeStatus(status, notes) {
 }
 
 if (!GITHUB_TOKEN || !REPO) throw new Error('GITHUB_TOKEN and GITHUB_REPOSITORY are required');
+// Anyone with Contents write can dispatch this workflow with a fault_point. An
+// unpermitted request must fail here, before any write, not mid-transaction.
+try { activeFailpoint(); }
+catch (error) { console.error(`Refusing run: ${error.message}`); process.exit(1); }
 for (const name of LABELS) await gh('POST', `${r}/labels`, { name });
 const notes = [];
 let state;

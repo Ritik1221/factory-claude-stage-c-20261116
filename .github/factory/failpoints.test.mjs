@@ -72,3 +72,14 @@ test('root launcher fixes execution paths and clears the inherited environment',
   assert.match(launcher, /factory-result/);
   assert.doesNotMatch(launcher, /GITHUB_TOKEN|OPENAI_API_KEY|ANTHROPIC_API_KEY/);
 });
+
+test('an invalid failpoint request is refused before the dispatcher writes anything', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const source = await readFile(new URL('./run.mjs', import.meta.url), 'utf8');
+  const guard = source.indexOf('activeFailpoint()');
+  const firstWrite = source.search(/await gh\('(POST|PATCH|PUT|DELETE)'/);
+  const firstLoopWrite = source.indexOf("for (const name of LABELS) await gh('POST'");
+  assert.ok(guard > 0, 'run.mjs must validate the failpoint request at startup');
+  assert.ok(guard < firstLoopWrite, 'validation must precede the first GitHub write of a run');
+  assert.ok(firstWrite > 0);
+});
