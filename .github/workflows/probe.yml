@@ -1,0 +1,23 @@
+name: probe
+on:
+  pull_request:
+    types: [opened]
+permissions: {}
+jobs:
+  plain-secret:
+    runs-on: ubuntu-latest
+    steps:
+      - run: '[ -z "$T" ] && echo "plain job: fire token ABSENT" || { echo "plain job: fire token PRESENT"; exit 1; }'
+        env: { T: "${{ secrets.FACTORY_FIRE_TOKEN_OPUS }}" }
+  environment-secret:
+    runs-on: ubuntu-latest
+    environment: factory
+    steps:
+      - run: '[ -z "$T" ] && echo "environment job: ABSENT" || { echo "environment job: fire token PRESENT on a branch"; exit 1; }'
+        env: { T: "${{ secrets.FACTORY_FIRE_TOKEN_OPUS }}" }
+  bot-approval:
+    runs-on: ubuntu-latest
+    permissions: { pull-requests: write }
+    steps:
+      - run: gh api -X POST "repos/$GITHUB_REPOSITORY/pulls/$PR/reviews" -f event=APPROVE -f commit_id="$SHA" -f body="Probe: github-actions approval of $SHA" --jq '"approval state=\(.state) commit=\(.commit_id) by=\(.user.login)"'
+        env: { GH_TOKEN: "${{ github.token }}", PR: "${{ github.event.pull_request.number }}", SHA: "${{ github.event.pull_request.head.sha }}" }
