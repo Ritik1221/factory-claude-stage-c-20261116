@@ -19,5 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions: { pull-requests: write }
     steps:
-      - run: gh api -X POST "repos/$GITHUB_REPOSITORY/pulls/$PR/reviews" -f event=APPROVE -f commit_id="$SHA" -f body="Probe: github-actions approval of $SHA" --jq '"approval state=\(.state) commit=\(.commit_id) by=\(.user.login)"'
+      - run: |
+          gh api -X POST "repos/$GITHUB_REPOSITORY/pulls/$PR/reviews" -f event=APPROVE -f commit_id="$SHA" \
+            -f body="Probe approval by github-actions of $SHA" \
+            --jq '"approval state=\(.state) commit=\(.commit_id) by=\(.user.login)"'
         env: { GH_TOKEN: "${{ github.token }}", PR: "${{ github.event.pull_request.number }}", SHA: "${{ github.event.pull_request.head.sha }}" }
